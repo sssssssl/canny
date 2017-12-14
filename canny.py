@@ -5,12 +5,12 @@ from math import tan
 kernel_gx = np.array([
     [1, 1],
     [-1, -1],
-]) * 2
+])
 
 kernel_gy = np.array([
     [1, -1],
     [1, -1]
-]) * 2
+])
 
 
 def calc_grad(image):
@@ -55,37 +55,20 @@ def nms(grad, tgs):
                 raise Exception('bad tangent value')
 
             p1, p2 = points_nearby
-            grad_nearby_1 = 0
-            grad_nearby_2 = 0
+            grad_p1 = 0
+            grad_p2 = 0
             if validate_index(p1[0], p1[1], height, width):
-                grad_nearby_1 = grad[p1[0]][p1[1]]
+                grad_p1 = grad[p1[0]][p1[1]]
             if validate_index(p2[0], p2[1], height, width):
-                grad_nearby_2 = grad[p2[0]][p2[1]]
-            if grad[i][j] > grad_nearby_1 and grad[i][j] > grad_nearby_2:
+                grad_p2 = grad[p2[0]][p2[1]]
+            if grad[i][j] > grad_p1 and grad[i][j] > grad_p2:
                 after_nms[i][j] = grad[i][j]
     return after_nms
 
 
 def validate_index(i, j, height, width):
-    return i >= 0 and i < height and j > 0 and j < width
+    return i >= 0 and i < height and j >= 0 and j < width
 
-
-# def double_thresholding(image, t1, t2):
-#     img_low = (image > t1) * image
-#     img_high = (image > t2) * image
-#     return img_low, img_high
-
-
-# def connect_img_high(img_high, img_low):
-#     result = np.zeros(img_high.shape)
-#     height, width = img_high.shape
-#     for i in range(height):
-#         for j in range(width):
-#             if img_high[i][j] > 0:
-#                 result[i][j] = img_high[i][j]
-#             elif img_high[i][j] == 0 and img_low[i][j] > 0 and look_around(img_low, i, j):
-#                 result[i][j] = img_low[i][j]
-#     return result
 
 def double_thresholding(image, t_high, t_low):
     height, width = image.shape
@@ -113,15 +96,15 @@ def find_component(image, x, y, t_low):
 
 
 def main():
-    img = cv2.imread('lena.jpg', cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread('Lenna.png', cv2.IMREAD_GRAYSCALE)
     grad, tgs = calc_grad(img)
-    cv2.imshow('grad', grad)
+    cv2.imshow('grad', grad.astype(np.uint8))
     # cv2.imwrite('grad.jpg', grad)
     after_nms = nms(grad, tgs)
-    cv2.imshow('nms', after_nms)
+    cv2.imshow('nms', after_nms.astype(np.uint8))
     # cv2.imwrite('nms.jpg', after_nms)
-    result = double_thresholding(after_nms, 30, 60)
-    cv2.imshow('res', result)
+    result = double_thresholding(after_nms, 15, 20)
+    cv2.imshow('res', result.astype(np.uint8))
     # cv2.imwrite('res.jpg', result)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
