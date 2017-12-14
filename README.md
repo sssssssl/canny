@@ -1,0 +1,1 @@
+Canny Detector in Python, ref requirements.txt for dependency.
