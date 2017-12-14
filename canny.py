@@ -66,59 +66,65 @@ def nms(grad, tgs):
     return after_nms
 
 
-def get_nearby_grad(grad, i, j, index, height, width):
-    val = 0
-    dx, dy = nearby_indexes[index]
-    pi, pj = i + dx, j + dy
-    if validate_index(pi, pj, height, width):
-        val = grad[pi, pj]
-    return val
-
-
 def validate_index(i, j, height, width):
     return i >= 0 and i < height and j > 0 and j < width
 
 
-def double_thresholding(image, t1, t2):
-    img_low = (image > t1) * image
-    img_high = (image > t2) * image
-    return img_low, img_high
+# def double_thresholding(image, t1, t2):
+#     img_low = (image > t1) * image
+#     img_high = (image > t2) * image
+#     return img_low, img_high
 
 
-def connect_img_high(img_high, img_low):
-    result = np.zeros(img_high.shape)
-    height, width = img_high.shape
+# def connect_img_high(img_high, img_low):
+#     result = np.zeros(img_high.shape)
+#     height, width = img_high.shape
+#     for i in range(height):
+#         for j in range(width):
+#             if img_high[i][j] > 0:
+#                 result[i][j] = img_high[i][j]
+#             elif img_high[i][j] == 0 and img_low[i][j] > 0 and look_around(img_low, i, j):
+#                 result[i][j] = img_low[i][j]
+#     return result
+
+def double_thresholding(image, t_high, t_low):
+    height, width = image.shape
     for i in range(height):
         for j in range(width):
-            if img_high[i][j] > 0:
-                result[i][j] = img_high[i][j]
-            elif img_high[i][j] == 0 and img_low[i][j] > 0 and look_around(img_low, i, j):
-                result[i][j] = img_low[i][j]
-    return result
+            if image[i][j] >= t_high:
+                image[i][j] = 255
+                find_component(image, i, j, t_low)
+
+    image[image < 255] = 0
+    return image
 
 
-def look_around(img, i, j):
-    height, width = img.shape
-    for dx, dy in nearby_indexes:
-        x, y = i + dx, j + dy
-        if validate_index(x, y, height, width) and img[x][y] > 0:
-            return True
-    return False
+def find_component(image, x, y, t_low):
+    height, width = image.shape
+    for i in range(x - 1, x + 2):
+        for j in range(y - 1, y + 2):
+            if validate_index(i, j, height, width) and i != x and j != y:
+                if image[i][j] != 255:
+                    if image[i][j] >= t_low:
+                        image[i][j] = 255
+                        find_component(image, i, j, t_low)
+                    else:
+                        image[i][j] = 0
 
 
 def main():
     img = cv2.imread('lena.jpg', cv2.IMREAD_GRAYSCALE)
     grad, tgs = calc_grad(img)
+    cv2.imshow('grad', grad)
+    # cv2.imwrite('grad.jpg', grad)
     after_nms = nms(grad, tgs)
-    # t1, t2 = double_thresholding(after_nms, 20, 50)
-    # res = connect_img_high(t2, t1)
-    cv2.imwrite('grad2.jpg', grad)
-    cv2.imwrite('nms2.jpg', after_nms)
-    # cv2.imwrite('res.jpg', res)
-    # cv2.imshow('grad', grad)
-    # cv2.imshow('nms', after_nms)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    cv2.imshow('nms', after_nms)
+    # cv2.imwrite('nms.jpg', after_nms)
+    result = double_thresholding(after_nms, 30, 60)
+    cv2.imshow('res', result)
+    # cv2.imwrite('res.jpg', result)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
