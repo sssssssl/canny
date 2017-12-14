@@ -1,3 +1,4 @@
+import sys
 import cv2
 import numpy as np
 from math import tan
@@ -11,6 +12,10 @@ kernel_gy = np.array([
     [1, -1],
     [1, -1]
 ])
+
+
+def validate_index(x, y, height, width):
+    return x >= 0 and x < height and y >= 0 and y < width
 
 
 def calc_grad(image):
@@ -66,11 +71,7 @@ def nms(grad, tgs):
     return after_nms
 
 
-def validate_index(i, j, height, width):
-    return i >= 0 and i < height and j >= 0 and j < width
-
-
-def double_thresholding(image, t_high, t_low):
+def hysteresis(image, t_low, t_high):
     height, width = image.shape
     for i in range(height):
         for j in range(width):
@@ -95,19 +96,32 @@ def find_component(image, x, y, t_low):
                         image[i][j] = 0
 
 
-def main():
-    img = cv2.imread('Lenna.png', cv2.IMREAD_GRAYSCALE)
-    grad, tgs = calc_grad(img)
+def show_result(grad, img_nms, result):
     cv2.imshow('grad', grad.astype(np.uint8))
-    # cv2.imwrite('grad.jpg', grad)
-    after_nms = nms(grad, tgs)
-    cv2.imshow('nms', after_nms.astype(np.uint8))
-    # cv2.imwrite('nms.jpg', after_nms)
-    result = double_thresholding(after_nms, 15, 20)
-    cv2.imshow('res', result.astype(np.uint8))
-    # cv2.imwrite('res.jpg', result)
+    cv2.imshow('nms', img_nms.astype(np.uint8))
+    cv2.imshow('result', result.astype(np.uint8))
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+
+def save_result(grad, img_nms, result):
+    cv2.imwrite('grad.jpg', grad.astype(np.uint8))
+    cv2.imwrite('nms.jpg', img_nms.astype(np.uint8))
+    cv2.imwrite('result.jpg', result.astype(np.uint8))
+
+
+def main():
+    if len(sys.argv) != 2:
+        print('usage:python canny.py <image_path>')
+        exit(0)
+    img_path = sys.argv[1]
+    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    grad, tgs = calc_grad(img)
+    mean = np.mean(grad)
+    after_nms = nms(grad, tgs)
+    img_nms = after_nms.copy()
+    result = hysteresis(after_nms, mean * 0.7, mean * 2)
+    show_result(grad, after_nms, result)
 
 
 if __name__ == '__main__':
